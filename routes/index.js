@@ -5,8 +5,10 @@ const { User, Domain } = require('../models');
 const router = express.Router();
 
 router.get('/', (req, res, next) => {
+  // Error: WHERE parameter "id" has invalid "undefined" value
+  // 위 에러가발생. where에서 undefined가 안 들어가는 문제.
   User.findOne({
-    where: { id: req.user && req.user.id },
+    where: { id: req.user && req.user.id  || null },
     include: { model: Domain },
   })
     .then((user) => {
