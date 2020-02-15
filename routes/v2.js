@@ -1,15 +1,12 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 
-const { verifyToken, deprecated } = require('./middlewares');
+const { verifyToken, apiLimiter } = require('./middlewares');
 const { Domain, User, Post, Hashtag } = require('../models');
 
 const router = express.Router();
 
-// 아래 코드를 통해 v1으로 접근한 모든 요청에 deprecated 응답을 보낸다.
-router.use(deprecated);
-
-router.post('/token', async (req, res) => {
+router.post('/token', apiLimiter, async (req, res) => {
   const { clientSecret } = req.body;
   try {
     const domain = await Domain.findOne({
@@ -25,14 +22,12 @@ router.post('/token', async (req, res) => {
         message: '등록되지 않은 도메인입니다. 먼저 도메인을 등록하세요',
       });
     }
-    // 등록된 도메인이라면 sign을 통해 토큰을 발급해서 응답
-    // sign의 첫번째 인자는 토큰의 내용, 두번째 인자는 토큰의 비밀키, 세번째 인자는 토큰의 설정
     const token = jwt.sign({
       id: domain.user.id,
       nick: domain.user.nick,
     }, process.env.JWT_SECRET, {
-      expiresIn: '1m', // 유효기간
-      issuer: 'nodebird', // 발급자
+      expiresIn: '30m', // 30분
+      issuer: 'nodebird',
     });
     return res.json({
       code: 200,
@@ -48,13 +43,12 @@ router.post('/token', async (req, res) => {
   }
 });
 
-// 토큰을 검증하는 미들웨어를 거친 후, 검증이 성공했다면 토큰의 내용물을 응답으로 보내줌
-router.get('/test', verifyToken, (req, res) => {
+router.get('/test', verifyToken, apiLimiter, (req, res) => {
   res.json(req.decoded);
 });
 
-router.get('/posts/my', verifyToken, (req, res) => {
-  Post.findAll({ where: {userId: req.decoded.id } })
+router.get('/posts/my', apiLimiter, verifyToken, (req, res) => {
+  Post.findAll({ where: { userId: req.decoded.id } })
     .then((posts) => {
       console.log(posts);
       res.json({
@@ -71,9 +65,9 @@ router.get('/posts/my', verifyToken, (req, res) => {
     });
 });
 
-router.get('/posts/hashtag/:title', verifyToken, async (req, res) => {
+router.get('/posts/hashtag/:title', verifyToken, apiLimiter, async (req, res) => {
   try {
-    const hashtag = await Hashtag.findOne({ where: { title: req.params.title }});
+    const hashtag = await Hashtag.findOne({ where: { title: req.params.title } });
     if (!hashtag) {
       return res.status(404).json({
         code: 404,

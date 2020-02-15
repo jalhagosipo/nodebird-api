@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const RateLimit = require('express-rate-limit');
 
 /**
  * 로그인 여부를 검사하는 미들웨어
@@ -49,4 +50,26 @@ exports.verifyToken = (req, res, next) => {
             message: '유효하지 않은 토큰입니다',
         });
     }
+};
+
+/**
+ * apiLimiter 미들웨어를 라우터에 넣으면 라우터에 사용량 제한이 걸린다.
+ */
+exports.apiLimiter = new RateLimit({
+    windowMs: 60 * 1000, // 1분. 기준시간
+    max: 1, // 허용횟수
+    delayMs: 0, // 호출 간격
+    handler(req, res) { // 제한 초과시 콜백함수
+        res.status(this.statusCode).json({
+            code: this.statusCode, // 기본값 429
+            message: '1분에 한 번만 요청할 수 있습니다.',
+        });
+    },
+});
+
+exports.deprecated = (req, res) => {
+    res.status(410).json({
+        code: 410,
+        message: '새로운 버전이 나왔습니다. 새로운 버전을 사용하세요.',
+    });
 };
