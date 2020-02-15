@@ -57,7 +57,7 @@ exports.verifyToken = (req, res, next) => {
  */
 exports.apiLimiter = new RateLimit({
     windowMs: 60 * 1000, // 1분. 기준시간
-    max: 1, // 허용횟수
+    max: 100, // 허용횟수
     delayMs: 0, // 호출 간격
     handler(req, res) { // 제한 초과시 콜백함수
         res.status(this.statusCode).json({
